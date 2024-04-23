@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@tailwind variants;
+
+html,
+body,
+#app {
+  @apply h-full overflow-hidden;
+}
+
+:root [data-theme='crimson'],
+:root [data-theme='modern'],
+:root [data-theme='rocket'],
+:root [data-theme='hamlindigo'],
+:root [data-theme='gold-nouveau'] {
+  --theme-rounded-base: 3px;
+  --theme-rounded-container: 5px;
+}
