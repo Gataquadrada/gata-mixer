@@ -59,16 +59,18 @@ function appSettingsSave(settings) {
   )
 
   try {
-    if (global.appConfig?.win_start) {
-      app.setLoginItemSettings({
-        openAtLogin: true,
-        enabled: true
-      })
-    } else {
-      app.setLoginItemSettings({
-        openAtLogin: true,
-        enabled: false
-      })
+    if (!is.dev) {
+      if (global.appConfig?.win_start) {
+        app.setLoginItemSettings({
+          openAtLogin: true,
+          enabled: true
+        })
+      } else {
+        app.setLoginItemSettings({
+          openAtLogin: true,
+          enabled: false
+        })
+      }
     }
   } catch (err) {
     log(err?.message ?? err)
@@ -81,7 +83,7 @@ function appSettingsSave(settings) {
 
 var inoReconnectTimer
 var inoConnection
-var inoOutputLast = ''
+var inoOutputLast = 'Loading...'
 /**
  * Description
  * @param {?string|?int} port=null
@@ -124,7 +126,8 @@ async function connectArduino(
           inoConnection.close()
           resolve(true)
         } else {
-          inoSend(inoOutputLast ?? 'LOADING...')
+          inoOutputLast = 'LOADING...'
+          inoSend(inoOutputLast)
           resolve(true)
         }
       })
@@ -164,7 +167,7 @@ async function connectArduino(
         if (reconnect) {
           inoReconnectTimer = setTimeout(() => {
             connectArduino()
-          }, 30000)
+          }, 5000)
         }
 
         const text = data.toString()?.trim()
@@ -353,7 +356,6 @@ function inoSend(message) {
   }
 }
 
-var vmReconnectTimer
 /**
  * Connecting to VM
  * @returns {Promise<boolean>}
@@ -378,12 +380,6 @@ async function connectVoiceMeeter(
       // Get output devices
       // log(voicemeeter.outputDevices)
 
-      // This library doesn't know when a disconnect happens. So we'll just keep trying to connect every 30 seconds.
-      clearInterval(vmReconnectTimer)
-      vmReconnectTimer = setInterval(() => {
-        connectVoiceMeeter()
-      }, 30000)
-
       resolve(true)
     } catch (err) {
       if (err.includes('connected')) resolve(true)
@@ -398,36 +394,35 @@ async function connectVoiceMeeter(
 
 /**
  * Returns VM's parameter value
+ * There's no way to know if VM is connected or not, so it's best to call connectVoiceMeeter() before this.
  * @param {string} param='Strip[0].Gain'
  * @returns {?float}
  */
 function getVoiceMeeterParam(param = 'Strip[0].Gain') {
-  try {
-    return voicemeeter.getRawParameterFloat(param, 0)
-  } catch (err) {
-    connectVoiceMeeter().then(() => {
-      getVoiceMeeterParam(param)
-    })
-    return null
-  }
+  connectVoiceMeeter().then(() => {
+    try {
+      voicemeeter.getRawParameterFloat(param, 0)
+    } catch (err) {
+      log(err?.message ?? err)
+    }
+  })
 }
 
 /**
- * Sets VM's parameter value
+ * Sets VM's parameter value.
+ * There's no way to know if VM is connected or not, so it's best to call connectVoiceMeeter() before this.
  * @param {string} param='Strip[0].Gain'
  * @param {float} value=0
  * @returns {?float}
  */
 function setVoiceMeeterParam(param = 'Strip[0].Gain', value = 0) {
-  try {
-    return voicemeeter.setRawParameterFloat(param, value)
-  } catch (err) {
-    log(err?.message ?? err)
-    connectVoiceMeeter().then(() => {
-      setVoiceMeeterParam(param, value)
-    })
-    return null
-  }
+  connectVoiceMeeter().then(() => {
+    try {
+      voicemeeter.setRawParameterFloat(param, value)
+    } catch (err) {
+      log(err?.message ?? err)
+    }
+  })
 }
 
 // IPC test

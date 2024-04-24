@@ -1,6 +1,8 @@
 <script>
   import './app.postcss'
 
+  import { onMount } from 'svelte'
+
   import { computePosition, autoUpdate, offset, shift, flip, arrow } from '@floating-ui/dom'
 
   import { storePopup } from '@skeletonlabs/skeleton'
@@ -38,8 +40,6 @@
 
     inoPorts = await api.inoListPorts()
 
-    await api.vmStart()
-
     stPort = settings?.arduino_port ?? false
     stPortOther = settings?.arduino_port_other ?? ''
     stVolumeDisplay = settings?.vm_volume_display ?? '%'
@@ -72,7 +72,15 @@
     inoConnected = true
   })
 
-  init()
+  // Skip Autodetect
+  const skipWizard = async () => {
+    settings.arduino_port = stPort = '_other'
+    await api.setSettings({ arduino_port: stPort })
+  }
+
+  onMount(() => {
+    init()
+  })
 </script>
 
 {#if stPort === false}
@@ -87,8 +95,7 @@
       <button
         class="btn variant-soft border border-gray-300"
         on:click={() => {
-          settings.arduino_port = stPort = 'COM1'
-          api.setSettings({ arduino_port: stPort })
+          skipWizard()
         }}>Skip Arduino check</button
       >
     </div>
@@ -161,7 +168,8 @@
           {#if !inoConnected}
             <button
               class="btn btn-lg variant-ringed !bg-surface-700 px-4 text-rose-500"
-              on:click={() => {
+              on:click={async () => {
+                inoPorts = await api.inoListPorts()
                 api.inoConnect('_other' == stPort ? stPortOther : stPort)
               }}
             >
@@ -175,7 +183,8 @@
             use:popup={{
               event: 'click',
               target: 'popupMainMenu',
-              placement: 'bottom'
+              placement: 'bottom',
+              closeQuery: '.listbox-item'
             }}
           >
             <ThreeDotsVertical />
@@ -187,7 +196,8 @@
               <ListBoxItem class="!bg-surface-700">
                 <div
                   class="flex items-center gap-2"
-                  on:click={() => {
+                  on:click={async () => {
+                    inoPorts = await api.inoListPorts()
                     api.inoConnect('_other' == stPort ? stPortOther : stPort)
                   }}
                 >
@@ -196,7 +206,7 @@
               </ListBoxItem>
 
               <!-- Reconnect INO -->
-              <ListBoxItem class="!bg-surface-700">
+              <!-- <ListBoxItem class="!bg-surface-700">
                 <div
                   class="flex items-center gap-2"
                   on:click={() => {
@@ -205,7 +215,7 @@
                 >
                   <span>Reconnect VoiceMeeter</span>
                 </div>
-              </ListBoxItem>
+              </ListBoxItem> -->
 
               <!-- Start with Windows -->
               <ListBoxItem class="!bg-surface-700">
